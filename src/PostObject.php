@@ -11,7 +11,7 @@ class PostObject
         add_action(
             'graphql_register_types',
             [$this, '__action_graphql_register_types'],
-            10,
+            99,
             0
         );
 
@@ -21,14 +21,14 @@ class PostObject
                 $this,
                 '__action_graphql_post_object_mutation_update_additional_data',
             ],
-            10,
+            99,
             4
         );
 
         add_filter(
             'graphql_map_input_fields_to_wp_query',
             [__NAMESPACE__ . '\\Helpers', 'map_language_to_query_args'],
-            10,
+            99,
             2
         );
 
@@ -38,7 +38,7 @@ class PostObject
         add_action(
             'graphql_resolve_field',
             [$this, '__action_is_translated_front_page'],
-            10,
+            99,
             8
         );
     }
@@ -84,6 +84,26 @@ class PostObject
         foreach (\WPGraphQL::get_allowed_post_types() as $post_type) {
             $this->add_post_type_fields(get_post_type_object($post_type));
         }
+
+        // Fallback registration for WooCommerce 'product' connection where
+        // args. Some integrations register post types late or with custom
+        // naming; explicitly register language fields for the common
+        // `RootQueryToProductConnectionWhereArgs` to ensure
+        // `products(where:{ language: ... })` is accepted.
+        register_graphql_fields('RootQueryToProductUnionConnectionWhereArgs', [
+            'language' => [
+                'type' => 'LanguageCodeFilterEnum',
+                'description' => 'Filter products by language code (Polylang)',
+            ],
+            'languages' => [
+                'type' => [
+                    'list_of' => [
+                        'non_null' => 'LanguageCodeEnum',
+                    ],
+                ],
+                'description' => 'Filter products by one or more languages (Polylang)',
+            ],
+        ]);
     }
 
     function add_post_type_fields(\WP_Post_Type $post_type_object)
